@@ -16,7 +16,10 @@ spec:
       - name: java 
         image: autodeploy.azurecr.io/csandhya8/springbootmavenjunitsample:#{Build.BuildId}#
         ports: 
-        - containerPort: 8080 
+        - containerPort: 8080
+      imagePullSecrets:
+      - name: autodeploy
+      
 --- 
 # https://kubernetes.io/docs/concepts/services-networking/service/#defining-a-service  
 kind: Service 
