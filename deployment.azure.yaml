@@ -19,6 +19,13 @@ spec:
         - containerPort: 8080
       imagePullSecrets:
       - name: autodeploy
+      containers: 
+      - name: java 
+        image: autodeploy.azurecr.io/csandhya8/maven-hello-world:#{Build.BuildId}#
+        ports: 
+        - containerPort: 8081
+      imagePullSecrets:
+      - name: autodeploy
       
 --- 
 # https://kubernetes.io/docs/concepts/services-networking/service/#defining-a-service  
