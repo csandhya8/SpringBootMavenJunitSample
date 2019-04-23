@@ -14,7 +14,7 @@ spec:
     spec: 
       containers: 
       - name: java 
-        image: autodeploy.azurecr.io/csandhya8/springbootmavenjunitsample:#{Build.BuildId}#
+        image: autodeploy.azurecr.io/csandhya8/springbootmavenjunitsample:#{Release.Artifacts.Springbootmavenjunitsample.BuildId}#
         ports: 
         - containerPort: 8080
       imagePullSecrets:
