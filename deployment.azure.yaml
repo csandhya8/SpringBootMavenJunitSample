@@ -33,38 +33,3 @@ spec:
     port: 80 
     targetPort: 80 
   type: LoadBalancer 
----
-apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2 
-kind: Deployment 
-metadata: 
-  name: myapp-deployment 
-spec: 
-  selector: 
-    matchLabels: 
-      app: myapp 
-  replicas: 2 # tells deployment to run 2 pods matching the template 
-  template:
-    metadata: 
-      labels: 
-        app: myapp
-    spec: 
-      containers: 
-      - name: myapp
-        image: autodeploy.azurecr.io/csandhya8/maven-hello-world:#{Build.BuildId}#
-        ports: 
-        - containerPort: 8081
-      imagePullSecrets:
-      - name: autodeploy     
----
-kind: Service 
-apiVersion: v1 
-metadata: 
-  name: myapp-service 
-spec: 
-  selector: 
-    app: myapp 
-  ports: 
-  - protocol: TCP 
-    port: 8081 
-    targetPort: 8081 
-  type: LoadBalancer 
