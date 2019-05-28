@@ -1,19 +1,19 @@
 apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2 
 kind: Deployment 
 metadata: 
-  name: java-deployment 
+  name: java-deployment-new
 spec: 
   selector: 
     matchLabels: 
-      app: java 
+      app: javanew
   replicas: 2 # tells deployment to run 2 pods matching the template 
   template:
     metadata: 
       labels: 
-        app: java 
+        app: javanew 
     spec: 
       containers: 
-      - name: java 
+      - name: javanew 
         image: imageacr.azurecr.io/csandhya8/springbootmavenjunitsample:#{Release.Artifacts._csandhya8_springbootmavenjunitsample.BuildId}#
         ports: 
         - containerPort: 8080
@@ -24,10 +24,10 @@ spec:
 kind: Service 
 apiVersion: v1 
 metadata: 
-  name: java-service 
+  name: java-service-new
 spec: 
   selector: 
-    app: java 
+    app: javanew 
   ports: 
   - protocol: TCP 
     port: 80 
