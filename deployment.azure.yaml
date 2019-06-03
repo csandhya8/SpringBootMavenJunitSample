@@ -1,5 +1,5 @@
-apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2 
-kind: Deployment 
+apiVersion: apps/v1beta2 # for versions before 1.9.0 use apps/v1beta2 
+kind: StatefulSet 
 metadata: 
   name: java-deployment-new
 spec: 
@@ -38,3 +38,21 @@ spec:
     port: 80 
     targetPort: 80 
   type: LoadBalancer 
+---
+apiVersion: autoscaling/v2beta1
+#apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+    name: java-deployment-autoscaler
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1beta2
+    kind: StatefulSet
+    name: java-deployment-new
+  minReplicas: 2
+  maxReplicas: 4
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      targetAverageUtilization: 85
