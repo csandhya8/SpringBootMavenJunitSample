@@ -16,7 +16,7 @@ spec:
     spec: 
       containers: 
       - name: javanew 
-        image: imageacr.azurecr.io/csandhya8/springbootmavenjunitsample:#{Release.Artifacts._csandhya8_springbootmavenjunitsample.BuildId}#
+        image: imageacr.azurecr.io/csandhya8/springbootmavenjunitsample:78
         resources:
           limits:
            cpu: "0.7"
