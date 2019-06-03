@@ -22,8 +22,8 @@ spec:
               - key: environment
                 operator: In
                 values:
-                - "newaks"
-             topologyKey: "kubernetes.io/hostname"
+                - newaks
+            topologyKey: "kubernetes.io/hostname"
       containers: 
       - name: javanew 
         image: imageacr.azurecr.io/csandhya8/springbootmavenjunitsample:78
