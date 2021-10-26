@@ -1,4 +1,5 @@
 FROM java:8
+USER root
 VOLUME /tmp
 EXPOSE 8080
 #ADD http://nexusrepo-nexus.cloudapps-5957.oslab.opentlc.com/content/repositories/releases/org/mong-ci/main/mong-jar/2.234/mong-jar-2.234.jar app.jar
