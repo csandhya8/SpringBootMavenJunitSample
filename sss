@@ -1,0 +1,13 @@
+ stage("Quality Gate"){
+    //  timeout(time: 1, unit: 'HOURS') {
+            def qg = waitForQualityGate()
+              if (qg.status != 'OK') {
+                  // mail (to: 'nagomi.b@olamnet.com',
+        //// subject: "Job '${env.JOB_NAME}' (${env.BUILD_NUMBER}) is waiting for input",
+//body: "Please go to ${env.BUILD_URL}.");
+                emailext body: ''' Project: OlamDirect       Service: Authorization Service
+                
+             Team,Please find the Quality gate status for the build $JOB_NAME. Sonar dashboard http://104.215.151.156/sonar/dashboard?id=com.olam.fsp%3AOlamFSPAuthorization.''', subject: 'Jenkins Deployment Status', to: 'swaytha.rajagopalan@olamnet.com,vramesh.tata@olamnet.com,adini.sudhakar@olamnet.com',cc: 'nagomi.b@olamnet.com'
+                 // error "Pipeline aborted due to quality gate failure: ${qg.status}" 
+                 
+              }
