@@ -15,10 +15,10 @@ jobs:
 
       - name: Upload to JFrog via REST
         env:
-          JFROG_URL: https://<your-jfrog-url>
-          REPO: <repo-name>             # e.g., generic-local
+          JFROG_URL: https://trial7091u2.jfrog.io/
+          REPO: test            # e.g., generic-local
           ARTIFACT_PATH: demos/${{ github.run_id }}/demo.zip
-          ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
+          ACCESS_TOKEN: 
         run: |
           curl -H "Authorization: Bearer $ACCESS_TOKEN" \
                -T demo.zip \
