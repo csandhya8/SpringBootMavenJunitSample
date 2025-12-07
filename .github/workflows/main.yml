@@ -1,35 +1,152 @@
 
-name: Upload dummy zip to JFrog
+name: Build – Derive GRS App Server Names
 
 on:
+  # Run with parameters (like Jenkins "build with parameters")
   workflow_dispatch:
+    inputs:
+      KEY:
+        description: "Comma-separated: LOB,ENV,JSON_CONFIG_FILE_PATH (e.g., Cards,DEV,configs/grs.json)"
+        required: true
+        type: string
+      TARGET_LOB:
+        description: "Comma-separated LOB(s); first item used (e.g., Cards or NA)"
+        required: true
+        type: string
 
 jobs:
-  upload:
+  derive-servers:
     runs-on: ubuntu-latest
+
+    # Expose job-level outputs for downstream jobs
+    outputs:
+      server_name_list: ${{ steps.compute.outputs.server_name_list }}
+      server_name_lines: ${{ steps.compute.outputs.server_name_lines }}
+      server_count: ${{ steps.compute.outputs.server_count }}
+
     steps:
-      - name: Create dummy zip
-        run: |
-          mkdir -p demo && echo "hello" > demo/hello.txt
-          zip -r demo_rt_v1.1.0.zip demo
+      - name: Checkout repository (to read the JSON file from the path in KEY)
+        uses: actions/checkout@v4
 
-      - name: Upload to JFrog via REST
-        env:
-          JFROG_URL: https://trial7091u2.jfrog.io
-          REPO: test            # e.g., generic-local
-          ARTIFACT_PATH: demos/${{ github.run_id }}/demo_rt_v1.1.0.zip
-          ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
-        run: |
-          curl -H "Authorization: Bearer $ACCESS_TOKEN" \
-               -T demo_rt_v1.1.0.zip \
-               "$JFROG_URL/artifactory/$REPO/$ARTIFACT_PATH"
+      - name: Ensure jq is available
+        run: sudo apt-get update && sudo apt-get install -y jq
 
-      - name: Verify upload
+      - name: Compute server names (sorted, with ':selected')
+        id: compute
+        shell: bash
         env:
-          JFROG_URL: https://<your-jfrog-url>
-          REPO: <repo-name>
-          ARTIFACT_PATH: demos/${{ github.run_id }}/demo_rt_v1.1.0.zip
-          ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
+          KEY: ${{ github.event.inputs.KEY }}
+          TARGET_LOB: ${{ github.event.inputs.TARGET_LOB }}
         run: |
-          curl -H "Authorization: Bearer $ACCESS_TOKEN" \
-               -I "$JFROG_URL/artifactory/$REPO/$ARTIFACT_PATH"
+          set -euo pipefail
+
+          # -------------------------------
+          # Parse inputs like Jenkins Groovy
+          # -------------------------------
+          # KEY format: LOB,ENV,JSON_CONFIG_FILE_PATH
+          IFS=',' read -r keyLOB keyEnv jsonConfigFilePath <<< "${KEY}"
+
+          # TARGET_LOB can be multiple; use first item
+          targetLOB="${TARGET_LOB%%,*}"
+          targetLOB="${targetLOB:-NA}"
+
+          echo "Input KEY: ${KEY}"
+          echo " -> keyLOB=${keyLOB}"
+          echo " -> keyEnv=${keyEnv}"
+          echo " -> jsonConfigFilePath=${jsonConfigFilePath}"
+          echo "Input TARGET_LOB: ${TARGET_LOB}"
+          echo " -> targetLOB(first)=${targetLOB}"
+
+          # Validate the JSON config file path
+          if [[ -z "${jsonConfigFilePath}" ]]; then
+            echo "ERROR: JSON config file path (3rd element of KEY) is empty." >&2
+            exit 2
+          fi
+          if [[ ! -f "${jsonConfigFilePath}" ]]; then
+            echo "ERROR: JSON config file not found at path: ${jsonConfigFilePath}" >&2
+            exit 3
+          fi
+
+          # If targetLOB is NA, return empty list (matches Jenkins behavior)
+          if [[ "${targetLOB^^}" == "NA" ]]; then
+            echo "Target LOB is 'NA' -> no servers to derive."
+            echo "server_name_list=" >> "$GITHUB_OUTPUT"
+            printf "server_name_lines<<EOF\n\nEOF\n" >> "$GITHUB_OUTPUT"
+            echo "server_count=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # -------------------------------
+          # Derive keys and read JSON
+          # -------------------------------
+          envKey="${keyEnv}_DEPLOY_GRS_LIST"
+          lobKey="${targetLOB}_GRS_APP_Servers"
+
+          echo "Derived envKey=${envKey}"
+          echo "Derived lobKey=${lobKey}"
+
+          # Extract array at .[envKey][lobKey]; tolerate missing keys
+          # Each element is appended with ':selected' and then sorted
+          mapfile -t rawServers < <(jq -r --arg envKey "${envKey}" --arg lobKey "${lobKey}" '.[$envKey][$lobKey][]?' "${jsonConfigFilePath}")
+
+          if [[ "${#rawServers[@]}" -eq 0 ]]; then
+            echo "No servers found under JSON path .\"${envKey}\".\"${lobKey}\""
+            echo "server_name_list=" >> "$GITHUB_OUTPUT"
+            printf "server_name_lines<<EOF\n\nEOF\n" >> "$GITHUB_OUTPUT"
+            echo "server_count=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Append ':selected' and sort (lexicographically, like Groovy .sort())
+          mapfile -t selectedServers < <(printf '%s\n' "${rawServers[@]}" | awk 'NF' | sed 's/$/:selected/' | sort)
+
+          # Join as comma-separated list
+          server_name_list="$(printf '%s\n' "${selectedServers[@]}" | paste -sd ',' -)"
+          server_count="${#selectedServers[@]}"
+
+          # Echo for readability
+          echo "------------------------------------------------------------"
+          echo "Servers found at .\"${envKey}\".\"${lobKey}\" (count=${server_count}):"
+          printf '%s\n' "${selectedServers[@]}"
+          echo "------------------------------------------------------------"
+          echo "server_name_list=${server_name_list}"
+
+          # Expose as step outputs
+          echo "server_name_list=${server_name_list}" >> "$GITHUB_OUTPUT"
+          echo "server_count=${server_count}" >> "$GITHUB_OUTPUT"
+          printf "server_name_lines<<EOF\n%s\nEOF\n" "$(printf '%s\n' "${selectedServers[@]}")" >> "$GITHUB_OUTPUT"
+
+      - name: Summary
+        if: always()
+        env:
+          server_count: ${{ steps.compute.outputs.server_count }}
+          server_name_list: ${{ steps.compute.outputs.server_name_list }}
+          server_name_lines: ${{ steps.compute.outputs.server_name_lines }}
+        run: |
+          echo "### Derived GRS App Servers" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Count:** ${server_count}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Comma-separated list:**" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "${server_name_list:-_none_}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Lines:**" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [[ -n "${server_name_lines:-}" ]]; then
+            printf '%s\n' "${server_name_lines}" | sed 's/^/- /' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "_none_" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  # Example downstream job consuming outputs (optional)
+  use-servers:
+    runs-on: ubuntu-latest
+    needs: derive-servers
+    steps:
+      - name: Use derived outputs
+        run: |
+          echo "Server count: ${{ needs.derive-servers.outputs.server_count }}"
+          echo "Server list (CSV): ${{ needs.derive-servers.outputs.server_name_list }}"
+          echo "Server lines:"
+          printf '%s\n' "${{ needs.derive-servers.outputs.server_name_lines }}"
