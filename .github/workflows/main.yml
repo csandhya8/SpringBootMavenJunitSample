@@ -11,13 +11,13 @@ jobs:
       - name: Create dummy zip
         run: |
           mkdir -p demo && echo "hello" > demo/hello.txt
-          zip -r demo.zip demo
+          zip -r demo_rt_v1.1.0.zip demo
 
       - name: Upload to JFrog via REST
         env:
           JFROG_URL: https://trial7091u2.jfrog.io
           REPO: test            # e.g., generic-local
-          ARTIFACT_PATH: demos/${{ github.run_id }}/demo.zip
+          ARTIFACT_PATH: demos/${{ github.run_id }}/demo_rt_v1.1.0.zip
           ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
         run: |
           curl -H "Authorization: Bearer $ACCESS_TOKEN" \
@@ -28,7 +28,7 @@ jobs:
         env:
           JFROG_URL: https://<your-jfrog-url>
           REPO: <repo-name>
-          ARTIFACT_PATH: demos/${{ github.run_id }}/demo.zip
+          ARTIFACT_PATH: demos/${{ github.run_id }}/demo_rt_v1.1.0.zip
           ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
         run: |
           curl -H "Authorization: Bearer $ACCESS_TOKEN" \
