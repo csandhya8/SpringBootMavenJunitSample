@@ -21,7 +21,7 @@ jobs:
           ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
         run: |
           curl -H "Authorization: Bearer $ACCESS_TOKEN" \
-               -T demo.zip \
+               -T demo_rt_v1.1.0.zip \
                "$JFROG_URL/artifactory/$REPO/$ARTIFACT_PATH"
 
       - name: Verify upload
