@@ -1,0 +1,9 @@
+{
+  "DEV_DEPLOY_GRS_LIST": {
+    "Cards_GRS_APP_Servers": [
+      "server-a",
+      "server-b",
+      "server-c"
+    ]
+  }
+}
